@@ -45,7 +45,9 @@ $crosFields = "annotatedAssetID,deviceId,status,serialNumber"
 $reenableQuery = Get-Content -Path '.\sql\reenable.sql' -Raw
 $updateCmdSql = Get-Content -Path '.\sql\Update-DRA-DD.sql' -Raw
 $stopTime = '6:00pm'
+$waitTime = 600 # Seconds
 Add-Log script "Running Until $stopTime"
+Add-Log script "Runs every $($waitTime/60) minutes"
 Add-Log info 'Checking for devices to Re-Enable'
 do {
  $reenableLoaners = Invoke-SqlCommand -Server $SQLServer -Database $SQLDatabase -Cred $SQLCredential -Query $reenableQuery
@@ -70,8 +72,7 @@ do {
  }
  if ($WhatIf -or $OneLoop) { BREAK }
  else {
-  #  Wait x munutes and run again until $endTime
-  $nextRun = (Get-Date).AddMinutes(20)
-  do { Start-Sleep 60 } until ( (Get-Date) -ge $nextRun )
+  #  Wait x seconds and run again until $stopTime
+  Start-Sleep -Seconds $waitTime
  }
 } until ( (Get-Date) -ge (Get-Date $stopTime) )
