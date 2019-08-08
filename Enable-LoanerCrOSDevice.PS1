@@ -34,13 +34,13 @@ param (
 )
 
 # Variables
+$ENV:GAM_DEVICE_MAX_RESULTS = 100
 $gamExe = '.\lib\gam-64\gam.exe'
 $crosFields = "annotatedAssetID,deviceId,status,serialNumber"
 
 # Imported Functions
 . .\lib\Add-Log.ps1 # Format Log entries
 . .\lib\Invoke-SqlCommand.ps1 # Useful function for querying SQL and returning results
-
 
 $reenableQuery = Get-Content -Path '.\sql\reenable.sql' -Raw
 $updateCmdSql = Get-Content -Path '.\sql\Update-DRA-DD.sql' -Raw
