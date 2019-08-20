@@ -29,6 +29,7 @@ param (
  [Parameter(Mandatory = $True)]
  [Alias('SISCred')]
  [System.Management.Automation.PSCredential]$SQLCredential,
+ [int]$WaitTime = 300,
  [switch]$OneLoop,
  [switch]$WhatIf
 )
@@ -45,7 +46,7 @@ $crosFields = "annotatedAssetID,deviceId,status,serialNumber"
 $reenableQuery = Get-Content -Path '.\sql\reenable.sql' -Raw
 $updateCmdSql = Get-Content -Path '.\sql\Update-DRA-DD.sql' -Raw
 $stopTime = '6:00pm'
-$waitTime = 600 # Seconds
+# $waitTime = 300 # Seconds
 Add-Log script "Running Until $stopTime"
 Add-Log script "Runs every $($waitTime/60) minutes"
 Add-Log info 'Checking for devices to Re-Enable'
