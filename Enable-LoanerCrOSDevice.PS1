@@ -88,6 +88,7 @@ do {
   # Update database to indicate device has been checked.
   $updateSql = $updateCmdSql -f $sn
   if (-not$WhatIf) { Invoke-Sqlcmd @sqlParams -Query $updateSql }
+  $psver 
  }
  if ($WhatIf -or $OneLoop) { BREAK }
  else {

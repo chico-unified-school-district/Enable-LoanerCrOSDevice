@@ -4,7 +4,7 @@
 *.zip
 *.log
 *.pw
-*oauth2.txt
+*oauth2.txtjson
 oauth2.txt
 
 Archive
