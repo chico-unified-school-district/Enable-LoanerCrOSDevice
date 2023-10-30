@@ -46,13 +46,30 @@ $crosFields = "annotatedAssetID,deviceId,status,serialNumber"
 
 $reenableQuery = Get-Content -Path '.\sql\reenable.sql' -Raw
 $updateCmdSql = Get-Content -Path '.\sql\Update-DRA-DD.sql' -Raw
+
 $stopTime = '6:00pm'
-# $waitTime = 300 # Seconds
-Add-Log script "Running Until $stopTime"
-Add-Log script "Runs every $($waitTime/60) minutes"
-Add-Log info 'Checking for devices to Re-Enable'
+Write-Host "Running Until $stopTime"
+Write-Host "Runs every $($waitTime/60) minutes" -F Green
+Write-Host 'Checking for devices to Re-Enable' -F Green
+
+. .\lib\Clear-SessionData.ps1
+. .\lib\Import-SomeModule.ps1
+. .\lib\Show-TestRun.ps1
+
+'SqlServer' | Import-SomeModule
+
+$sqlParams = @{
+ Server                 = $SQLServer
+ Database               = $SQLDatabase
+ Credential             = $SQLCredential
+ TrustServerCertificate = $true
+}
+
+Show-TestRun
+Clear-SessionData
+
 do {
- $reenableLoaners = Invoke-SqlCommand -Server $SQLServer -Database $SQLDatabase -Cred $SQLCredential -Query $reenableQuery
+ $reenableLoaners = Invoke-Sqlcmd @sqlParams -Query $reenableQuery
  # $reenableLoaners = @{SerialNumber="5CD71312K0"} # For Testing purposes
 
  foreach ($device in $reenableLoaners) {
@@ -69,8 +86,8 @@ do {
   }
   else { Write-Verbose "$sn, Skipping. Already 'ACTIVE'" }
   # Update database to indicate device has been checked.
-  $updateCmd = $updateCmdSql -f $sn
-  Invoke-SqlCommand -Server $SQLServer -Database $SQLDatabase -Cred $SQLCredential -SQLCommand $updateCmd -WhatIf:$WhatIf
+  $updateSql = $updateCmdSql -f $sn
+  if (-not$WhatIf) { Invoke-Sqlcmd @sqlParams -Query $updateSql }
  }
  if ($WhatIf -or $OneLoop) { BREAK }
  else {
