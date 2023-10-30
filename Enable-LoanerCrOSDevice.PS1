@@ -37,7 +37,7 @@ param (
 
 # Variables
 # $ENV:GAM_DEVICE_MAX_RESULTS = 100
-$gamExe = '.\bin\gam.exe'
+$gam = '.\bin\gam.exe'
 $crosFields = "annotatedAssetID,deviceId,status,serialNumber"
 
 # Imported Functions
@@ -75,20 +75,19 @@ do {
  foreach ($device in $reenableLoaners) {
   $sn = $device.serialNumber
   Write-Debug "Process $sn"
-
-  ($crosDev = & $gamExe print cros query "id: $sn" fields $crosFields | ConvertFrom-CSV) *>$null # *>$null suppresses noisy gam.exe output
+  ($crosDev = & $gam print cros query "id: $sn" fields $crosFields | ConvertFrom-CSV)*>$null
   $id = $crosDev.deviceId
 
   Write-Verbose ($crosDev | Out-String)
   if ($crosDev.status -eq "DISABLED") {
    Add-Log enable $sn
-   if (!$WhatIf) { & $gamExe update cros $id action reenable *>$null } # *>$null hides gam.exe output
+   if (!$WhatIf) { & $gam update cros $id action reenable *>$null } # *>$null hides gam.exe output
   }
   else { Write-Verbose "$sn, Skipping. Already 'ACTIVE'" }
   # Update database to indicate device has been checked.
   $updateSql = $updateCmdSql -f $sn
   if (-not$WhatIf) { Invoke-Sqlcmd @sqlParams -Query $updateSql }
-  $psver 
+  $psver
  }
  if ($WhatIf -or $OneLoop) { BREAK }
  else {
