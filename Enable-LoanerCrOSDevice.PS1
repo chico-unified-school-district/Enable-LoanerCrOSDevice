@@ -1,5 +1,5 @@
 #Requires -Version 5.0
-<# 
+<#
 .SYNOPSIS
  Queries Aeries for Chromebooks marked as loaners and enables them throoughout the school day
 .DESCRIPTION
@@ -16,7 +16,7 @@
 #>
 
 [cmdletbinding()]
-param ( 
+param (
  # SQL server name
  [Parameter(Mandatory = $True)]
  [Alias('SISServer')]
@@ -25,18 +25,19 @@ param (
  [Parameter(Mandatory = $True)]
  [Alias('SISDatabase', 'SISDB')]
  [string]$SQLDatabase,
- # Aeries SQL user account with SELECT permission to STU table 
+ # Aeries SQL user account with SELECT permission to STU table
  [Parameter(Mandatory = $True)]
  [Alias('SISCred')]
  [System.Management.Automation.PSCredential]$SQLCredential,
  [int]$WaitTime = 300,
  [switch]$OneLoop,
+ [Alias('wi')]
  [switch]$WhatIf
 )
 
 # Variables
-$ENV:GAM_DEVICE_MAX_RESULTS = 100
-$gamExe = '.\lib\gam-64\gam.exe'
+# $ENV:GAM_DEVICE_MAX_RESULTS = 100
+$gamExe = '.\bin\gam.exe'
 $crosFields = "annotatedAssetID,deviceId,status,serialNumber"
 
 # Imported Functions
@@ -58,7 +59,7 @@ do {
   $sn = $device.serialNumber
   Write-Debug "Process $sn"
 
-  ($crosDev = & $gamExe print cros query "id: $sn" fields $crosFields | ConvertFrom-CSV) *>$null # *>$null suppresses noisy gam.exe output 
+  ($crosDev = & $gamExe print cros query "id: $sn" fields $crosFields | ConvertFrom-CSV) *>$null # *>$null suppresses noisy gam.exe output
   $id = $crosDev.deviceId
 
   Write-Verbose ($crosDev | Out-String)
