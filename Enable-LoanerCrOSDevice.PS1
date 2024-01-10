@@ -1,4 +1,3 @@
-#Requires -Version 5.0
 <#
 .SYNOPSIS
  Queries Aeries for Chromebooks marked as loaners and enables them throoughout the school day
@@ -29,32 +28,70 @@ param (
  [Parameter(Mandatory = $True)]
  [Alias('SISCred')]
  [System.Management.Automation.PSCredential]$SQLCredential,
- [int]$WaitTime = 300,
- [switch]$OneLoop,
+ [string]$StopTime = "6:00 PM",
  [Alias('wi')]
  [switch]$WhatIf
 )
 
-# Variables
-# $ENV:GAM_DEVICE_MAX_RESULTS = 100
+function Get-Data ($params) {
+ begin { $sql = Get-Content -Path '.\sql\reenable.sql' -Raw }
+ process {
+  $data = Invoke-SqlCmd @params -Query $sql
+  Write-Verbose ('{0},Count {1}' -f $MyInvocation.MyCommand.Name, $data.count)
+  $data
+ }
+}
+
+function Enable-GDevice {
+ process {
+  $msg = $MyInvocation.MyCommand.Name, $_.barCode, $_.sn
+  if ($_.status -eq "ACTIVE") { return (Write-Verbose ('{0},{1},{2},Device already active' -f $msg)) }
+  Write-Host ('{0},{1},{2}' -f $msg) -F Blue
+  Write-Verbose "& $gam update cros $($_.id) action reenable"
+  if (!$WhatIf) { (& $gam update cros $_.id action reenable) *>$null }
+  $_
+ }
+}
+
+function Get-CrosDev {
+ begin { $crosFields = "annotatedAssetID,deviceId,status,serialNumber" }
+ process {
+  $msg = $MyInvocation.MyCommand.Name, $_.barCode, $_.sn
+  Write-Verbose ('{0},{1},{2}' -f $msg)
+  Write-Verbose "& $gam print cros query `"asset_id: $($_.barCode)`" fields $crosFields"
+  ($dev = & $gam print cros query "asset_id: $($_.barCode)" fields $crosFields | ConvertFrom-CSV) *>$null
+  if (!$dev) { return (Write-Verbose ('{0},{1},{2}, CrOS device not found' -f $msg)) }
+  $obj = [PSCustomObject]@{
+   sn      = $_.sn
+   barCode = $_.barCode
+   dts     = $_.dts
+   flag    = $_.reEnabledFlag
+   id      = $dev.deviceId
+   status  = $dev.status
+  }
+  $obj
+  Write-Verbose ($obj | Out-String)
+ }
+}
+
+function Update-SqlDate {
+ begin { $baseSql = Get-Content -Path '.\sql\Update-DRA-DD.sql' -Raw }
+ process {
+  $msg = $MyInvocation.MyCommand.Name, $_.barCode, $_.sn
+  $sql = $baseSql -f $_.sn
+  Write-Host ('{0},{1},{2}' -f $msg) -F Blue
+  Write-Verbose ('{0},{1}' -f $MyInvocation.MyCommand.Name, $sql)
+  if (!$WhatIf) { Invoke-SqlCmd @params -Query $sql }
+ }
+}
+
 $gam = '.\bin\gam.exe'
-$crosFields = "annotatedAssetID,deviceId,status,serialNumber"
 
 # Imported Functions
-. .\lib\Add-Log.ps1 # Format Log entries
-. .\lib\Invoke-SqlCommand.ps1 # Useful function for querying SQL and returning results
-
-$reenableQuery = Get-Content -Path '.\sql\reenable.sql' -Raw
-$updateCmdSql = Get-Content -Path '.\sql\Update-DRA-DD.sql' -Raw
-
-$stopTime = '6:00pm'
-Write-Host "Running Until $stopTime"
-Write-Host "Runs every $($waitTime/60) minutes" -F Green
-Write-Host 'Checking for devices to Re-Enable' -F Green
-
-. .\lib\Clear-SessionData.ps1
 . .\lib\Import-SomeModule.ps1
 . .\lib\Show-TestRun.ps1
+
+Show-TestRun
 
 'SqlServer' | Import-SomeModule
 
@@ -65,33 +102,7 @@ $sqlParams = @{
  TrustServerCertificate = $true
 }
 
-Show-TestRun
-Clear-SessionData
-
 do {
- $reenableLoaners = Invoke-Sqlcmd @sqlParams -Query $reenableQuery
- # $reenableLoaners = @{SerialNumber="5CD71312K0"} # For Testing purposes
-
- foreach ($device in $reenableLoaners) {
-  $sn = $device.serialNumber
-  Write-Debug "Process $sn"
-  ($crosDev = & $gam print cros query "id: $sn" fields $crosFields | ConvertFrom-CSV)*>$null
-  $id = $crosDev.deviceId
-
-  Write-Verbose ($crosDev | Out-String)
-  if ($crosDev.status -eq "DISABLED") {
-   Add-Log enable $sn
-   if (!$WhatIf) { & $gam update cros $id action reenable *>$null } # *>$null hides gam.exe output
-  }
-  else { Write-Verbose "$sn, Skipping. Already 'ACTIVE'" }
-  # Update database to indicate device has been checked.
-  $updateSql = $updateCmdSql -f $sn
-  if (-not$WhatIf) { Invoke-Sqlcmd @sqlParams -Query $updateSql }
-  $psver
- }
- if ($WhatIf -or $OneLoop) { BREAK }
- else {
-  #  Wait x seconds and run again until $stopTime
-  Start-Sleep -Seconds $waitTime
- }
-} until ( (Get-Date) -ge (Get-Date $stopTime) )
+ Get-Data $sqlParams | Get-CrosDev | Enable-GDevice | Update-SqlDate
+ if (!$WhatIf) { Start-Sleep -Seconds 300 }
+} until ( $WhatIf -or ((Get-Date) -ge (Get-Date $StopTime)) )
