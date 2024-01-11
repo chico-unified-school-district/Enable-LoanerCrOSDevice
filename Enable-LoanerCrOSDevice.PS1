@@ -45,7 +45,7 @@ function Get-Data ($params) {
 function Enable-GDevice {
  process {
   $msg = $MyInvocation.MyCommand.Name, $_.barCode, $_.sn
-  if ($_.status -eq "ACTIVE") { return (Write-Verbose ('{0},{1},{2},Device already active' -f $msg)) }
+  if ($_.status -eq "ACTIVE") { return (Write-Verbose ('{0},{1},{2},Device already active' -f $msg)), $_ }
   Write-Host ('{0},{1},{2}' -f $msg) -F Blue
   Write-Verbose "& $gam update cros $($_.id) action reenable"
   if (!$WhatIf) { (& $gam update cros $_.id action reenable) *>$null }
