@@ -101,8 +101,8 @@ $sqlParams = @{
  Credential             = $SQLCredential
  TrustServerCertificate = $true
 }
-
+'==== Runs every 5 minutes ==== '
 do {
  Get-Data $sqlParams | Get-CrosDev | Enable-GDevice | Update-SqlDate
- if (!$WhatIf) { Start-Sleep -Seconds 300 }
+ if (!$WhatIf) { Start-Sleep -Seconds (60 * 5) }
 } until ( $WhatIf -or ((Get-Date) -ge (Get-Date $StopTime)) )
