@@ -74,7 +74,7 @@ function Get-CrosDev {
  }
 }
 
-function Update-SqlDate {
+function Update-SqlDate ($params) {
  begin { $baseSql = Get-Content -Path '.\sql\Update-DRA-DD.sql' -Raw }
  process {
   $msg = $MyInvocation.MyCommand.Name, $_.barCode, $_.sn
@@ -103,6 +103,6 @@ $sqlParams = @{
 }
 '==== Runs every 5 minutes ==== '
 do {
- Get-Data $sqlParams | Get-CrosDev | Enable-GDevice | Update-SqlDate
+ Get-Data $sqlParams | Get-CrosDev | Enable-GDevice | Update-SqlDate $sqlParams
  if (!$WhatIf) { Start-Sleep -Seconds (60 * 5) }
 } until ( $WhatIf -or ((Get-Date) -ge (Get-Date $StopTime)) )
